@@ -1,0 +1,230 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>pl.frati.dynx</groupId>
+	<artifactId>dynx-tasks</artifactId>
+	<version>1.0.0-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<prerequisites>
+		<maven>2.2.1</maven>
+	</prerequisites>
+
+	<name>${project.artifactId}</name>
+	<description>Library contains utilities that help creating and managing long running tasks, that may be executed with multiple threads.</description>
+	<url>https://dynx.frati.pl/${project.artifactId}</url>
+
+	<organization>
+		<name>Frati Sp. z o.o.</name>
+		<url>http://www.frati.pl/</url>
+	</organization>
+
+	<licenses>
+		<license>
+			<name>GNU General Lesser Public License (LGPL) version 3.0</name>
+			<url>https://www.gnu.org/licenses/lgpl-3.0.en.html</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<id>raffig</id>
+			<name>Rafał Figas</name>
+			<email>rafal.figas@frati.pl</email>
+			<roles>
+				<role>developer</role>
+			</roles>
+		</developer>
+	</developers>
+
+	<properties>
+		<java.version>1.7</java.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+
+	<dependencies>
+	</dependencies>
+
+	<repositories>
+		<repository>
+			<id>archiva.frati.pl-public</id>
+			<name>Frati Public Repository</name>
+			<url>https://archiva.frati.pl/repository/public/</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+		<repository>
+			<id>archiva.frati.pl-snapshots</id>
+			<name>Frati Snapshot Repository</name>
+			<url>https://archiva.frati.pl/repository/snapshots/</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.5.1</version>
+				<configuration>
+					<source>${java.version}</source>
+					<target>${java.version}</target>
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>3.0.0</version>
+				<configuration>
+					<archive>
+						<manifest>
+							<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+						</manifest>
+						<manifestEntries>
+							<Project-Home>${project.url}</Project-Home>
+							<Build-Time>${maven.build.timestamp}</Build-Time>
+						</manifestEntries>
+					</archive>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-site-plugin</artifactId>
+				<version>3.3</version>
+				<dependencies>
+					<dependency><!-- add support for ssh/scp -->
+						<groupId>org.apache.maven.wagon</groupId>
+						<artifactId>wagon-ssh</artifactId>
+						<version>1.0</version>
+					</dependency>
+					<dependency>
+						<groupId>org.apache.maven.doxia</groupId>
+						<artifactId>doxia-module-confluence</artifactId>
+						<version>1.4</version>
+					</dependency>
+				</dependencies>
+				<configuration>
+					<siteDirectory>site</siteDirectory>
+					<inputEncoding>UTF-8</inputEncoding>
+					<outputEncoding>UTF-8</outputEncoding>
+					<locales>en</locales>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>2.4.1</version>
+			</plugin>
+		</plugins>
+	</build>
+
+	<scm>
+		<developerConnection>scm:hg:file://${basedir}</developerConnection>
+		<tag>HEAD</tag>
+	</scm>
+
+	<distributionManagement>
+		<repository>
+			<id>archiva.frati.pl-public</id>
+			<url>https://archiva.frati.pl/repository/public/</url>
+		</repository>
+		<snapshotRepository>
+			<id>archiva.frati.pl-public</id>
+			<url>https://archiva.frati.pl/repository/public/</url>
+		</snapshotRepository>
+		<site>
+			<id>dynx.frati.pl</id>
+			<url>scp://dynx.frati.pl/var/www/dynx.frati.pl/htdocs/${project.artifactId}</url>
+		</site>
+	</distributionManagement>
+
+	<reporting>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.9</version>
+				<configuration>
+					<locale>pl_PL</locale>
+					<charset>UTF-8</charset>
+				</configuration>
+				<reportSets>
+					<reportSet>
+						<reports>
+							<report>javadoc</report>
+						</reports>
+					</reportSet>
+				</reportSets>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-project-info-reports-plugin</artifactId>
+				<version>2.7</version>
+				<configuration>
+					<developerConnection>scm:hg:https://login@mercurial.frati.pl/${project.artifactId}</developerConnection>
+					<webAccessUrl>https://mercurial.frati.pl</webAccessUrl>
+				</configuration>
+				<reportSets>
+					<reportSet>
+						<reports>
+							<report>dependencies</report>
+							<report>issue-tracking</report>
+							<report>scm</report>
+							<report>distribution-management</report>
+							<report>summary</report>
+							<report>index</report>
+							<report>project-team</report>
+						</reports>
+					</reportSet>
+				</reportSets>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-changes-plugin</artifactId>
+				<version>2.9</version>
+				<configuration>
+					<xmlPath>site/changes.xml</xmlPath>
+				</configuration>
+				<reportSets>
+					<reportSet>
+						<reports>
+							<report>changes-report</report>
+						</reports>
+					</reportSet>
+				</reportSets>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-pmd-plugin</artifactId>
+				<version>3.0.1</version>
+				<configuration>
+					<targetJdk>1.6</targetJdk>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-report-plugin</artifactId>
+				<version>2.14.1</version>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>cobertura-maven-plugin</artifactId>
+				<version>2.5.2</version>
+			</plugin>
+		</plugins>
+	</reporting>
+
+</project>
