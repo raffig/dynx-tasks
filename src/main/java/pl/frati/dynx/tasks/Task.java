@@ -1,5 +1,7 @@
 package pl.frati.dynx.tasks;
 
+import java.util.Optional;
+
 /**
  * <p>
  * General interface of managable task.
@@ -106,6 +108,20 @@ public interface Task {
 	 *            observer to be added (never null)
 	 */
 	void addStateObserver(StateObserver observer);
+
+	/**
+	 * <p>
+	 * Returns exception that caused the task to fail.
+	 * </p>
+	 * 
+	 * <p>
+	 * Note that exception may not be present even when task fails (is in
+	 * {@link State#FAILED}, as other circumstances may cause a task to fail.
+	 * </p>
+	 * 
+	 * @return Optional Exception causing task fail
+	 */
+	Optional<Exception> getFailCause();
 
 	/**
 	 * <p>

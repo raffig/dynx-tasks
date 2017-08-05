@@ -2,6 +2,7 @@ package pl.frati.dynx.tasks;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -47,6 +48,7 @@ public abstract class AbstractThreadTask implements ThreadTask {
 	private ReentrantReadWriteLock currentStateLock = new ReentrantReadWriteLock();
 	private Task.State currentState = Task.State.NOT_STARTED;
 	private List<StateObserver> stateObservers = new ArrayList<>(1);
+	private Exception failCause;
 
 	public AbstractThreadTask() {
 		this(UUID.randomUUID().toString());
@@ -113,14 +115,29 @@ public abstract class AbstractThreadTask implements ThreadTask {
 
 			notifyObservers(oldState, currentState);
 
+			oldState = null;
 			stateChanged = false;
 
-			while (hasNextPortion()) {
+			while (true) {
 
-				executeNextPortion();
-
-				oldState = null;
-				stateChanged = false;
+				try {
+					if (hasNextPortion()) {
+						executeNextPortion();
+					} else {
+						break;
+					}
+				} catch (Exception e) {
+					failCause = e;
+					
+					oldState = currentState;
+					currentStateLock.writeLock().lock();
+					try {
+						currentState = State.FAILED;
+						stateChanged = true;
+					} finally {
+						currentStateLock.writeLock().unlock();
+					}
+				}
 
 				currentStateLock.writeLock().lock();
 				try {
@@ -145,9 +162,9 @@ public abstract class AbstractThreadTask implements ThreadTask {
 					synchronized (this) {
 						wait();
 					}
-				}
-
-				if (Task.State.STOPPPED.equals(getCurrentState())) {
+				} else if (Task.State.STOPPPED.equals(getCurrentState())) {
+					return;
+				} else if (State.FAILED.equals(currentState)) {
 					return;
 				}
 			}
@@ -170,6 +187,11 @@ public abstract class AbstractThreadTask implements ThreadTask {
 		} catch (InterruptedException e) {
 			throw new RuntimeException("Interrupted!", e);
 		}
+	}
+	
+	@Override
+	public Optional<Exception> getFailCause() {
+		return Optional.ofNullable(failCause);
 	}
 
 	@Override

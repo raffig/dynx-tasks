@@ -1,6 +1,7 @@
 package pl.frati.dynx.tasks;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -13,6 +14,8 @@ public class ThreadedTask implements Task {
 	private State currentState;
 	private List<ThreadTask> tasks = new CopyOnWriteArrayList<>();
 	private List<StateObserver> stateObservers = new CopyOnWriteArrayList<>();
+	private boolean finishingWithFail;
+	private Exception failCause;
 
 	public ThreadedTask() {
 		this(UUID.randomUUID().toString());
@@ -29,25 +32,39 @@ public class ThreadedTask implements Task {
 		return id;
 	}
 
+	@Override
+	public Optional<Exception> getFailCause() {
+		return Optional.ofNullable(failCause);
+	}
+
 	private void updateStateUponTasksStates() {
 		stateChangeLock.writeLock().lock();
 
 		try {
 
-			if (State.PAUSING.equals(currentState)) {
-				if (tasks.stream().allMatch(t -> State.PAUSED.equals(t.getCurrentState()))) {
-					currentState = State.PAUSED;
-				}
-			}
+			if (finishingWithFail) {
 
-			if (State.STOPPING.equals(currentState)) {
-				if (tasks.stream().allMatch(t -> State.STOPPPED.equals(t.getCurrentState()))) {
-					currentState = State.STOPPPED;
+				if (tasks.stream().allMatch(t -> {
+					return State.FAILED.equals(t.getCurrentState()) || State.FINISHED.equals(t.getCurrentState()) || State.NOT_STARTED.equals(t.getCurrentState()) || State.STOPPPED.equals(t.getCurrentState());
+				})) {
+					currentState = State.FAILED;
 				}
-			}
+			} else {
+				if (State.PAUSING.equals(currentState)) {
+					if (tasks.stream().allMatch(t -> State.PAUSED.equals(t.getCurrentState()))) {
+						currentState = State.PAUSED;
+					}
+				}
 
-			if (tasks.stream().allMatch(t -> State.FINISHED.equals(t.getCurrentState()))) {
-				currentState = State.FINISHED;
+				if (State.STOPPING.equals(currentState)) {
+					if (tasks.stream().allMatch(t -> State.STOPPPED.equals(t.getCurrentState()))) {
+						currentState = State.STOPPPED;
+					}
+				}
+
+				if (tasks.stream().allMatch(t -> State.FINISHED.equals(t.getCurrentState()))) {
+					currentState = State.FINISHED;
+				}
 			}
 
 		} finally {
@@ -113,9 +130,9 @@ public class ThreadedTask implements Task {
 
 	@Override
 	public void requestStop() {
-		if (!State.RUNNING.equals(currentState)) {
-			throw new IllegalStateException("Only manager that is in " + State.RUNNING
-					+ " state may be stopped. Manager is currently in " + currentState.name() + " state.");
+		if (!State.RUNNING.equals(currentState) && (!State.STARTING.equals(currentState))) {
+			throw new IllegalStateException("Only task that is in " + State.RUNNING + " or " + State.STARTING
+					+ " state may be stopped. Task is currently in " + currentState.name() + " state.");
 		}
 
 		try {
@@ -169,6 +186,20 @@ public class ThreadedTask implements Task {
 
 		@Override
 		public void stateChanged(Task task, State oldState, State newState) {
+
+			if (State.FAILED.equals(newState)) {
+				task.getFailCause().ifPresent(e -> failCause = e);
+				finishingWithFail = true;
+				tasks.forEach(t -> {
+					if (State.PAUSED.equals(t.getCurrentState()) || State.PAUSING.equals(t.getCurrentState())) {
+						t.requestResume();
+						t.requestStop();
+					} else if (State.RUNNING.equals(t.getCurrentState())
+							|| State.STARTING.equals(t.getCurrentState())) {
+						t.requestStop();
+					}
+				});
+			}
 			updateStateUponTasksStates();
 		}
 
