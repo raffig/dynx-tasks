@@ -55,7 +55,7 @@ public class AbstractThreadTaskTest {
 		Assert.assertEquals(task.getCurrentState(), State.RUNNING);
 		
 		task.requestPause();
-		Thread.sleep(100);
+		Thread.sleep(200);
 		System.out.println(task);
 		
 		Assert.assertEquals(task.getCurrentState(), State.PAUSED);

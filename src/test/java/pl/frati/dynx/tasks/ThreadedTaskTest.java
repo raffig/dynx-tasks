@@ -169,7 +169,7 @@ public class ThreadedTaskTest {
 	public void checkTaskFailOnSingleThread() throws InterruptedException {
 		
 		ThreadedTask task = new ThreadedTask();
-		task.addThreadTask(new ThreadTestTask(0, 3, 2));
+		task.addThreadTask(new ThreadTestTask(100, 0, 3, 2));
 		
 		task.requestStart();
 		
