@@ -5,7 +5,7 @@
 	<groupId>pl.frati.dynx</groupId>
 	<artifactId>dynx-tasks</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
-	<packaging>pom</packaging>
+	<packaging>jar</packaging>
 
 	<prerequisites>
 		<maven>2.2.1</maven>
@@ -40,7 +40,7 @@
 	</developers>
 
 	<properties>
-		<java.version>1.7</java.version>
+		<java.version>1.8</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
