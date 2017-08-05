@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 
 public class ThreadedTask implements Task {
 
-	private String name;
+	private String id;
 	private ReentrantReadWriteLock stateChangeLock = new ReentrantReadWriteLock();
 	private State currentState;
 	private List<ThreadTask> tasks = new CopyOnWriteArrayList<>();
@@ -20,13 +20,13 @@ public class ThreadedTask implements Task {
 
 	public ThreadedTask(String name) {
 		super();
-		this.name = name;
+		this.id = name;
 		currentState = State.NOT_STARTED;
 	}
 
 	@Override
-	public String getName() {
-		return name;
+	public String getId() {
+		return id;
 	}
 
 	private void updateStateUponTasksStates() {
@@ -78,8 +78,8 @@ public class ThreadedTask implements Task {
 	@Override
 	public void requestStart() {
 		if (!State.NOT_STARTED.equals(currentState)) {
-			throw new IllegalStateException("Only manager that is in " + State.NOT_STARTED
-					+ " state may be started. Manager is currently in " + currentState.name() + " state.");
+			throw new IllegalStateException("Only task that is in " + State.NOT_STARTED
+					+ " state may be started. Task is currently in " + currentState.name() + " state.");
 		}
 		try {
 
@@ -96,7 +96,7 @@ public class ThreadedTask implements Task {
 	public void requestPause() {
 
 		if (!State.RUNNING.equals(currentState)) {
-			throw new IllegalStateException("Only manager that is in " + State.RUNNING
+			throw new IllegalStateException("Only task that is in " + State.RUNNING
 					+ " state may be paused. Manager is currently in " + currentState.name() + " state.");
 		}
 
@@ -153,7 +153,7 @@ public class ThreadedTask implements Task {
 		StringBuilder sb = new StringBuilder();
 
 		sb.append("ThreadedTask [");
-		sb.append(name);
+		sb.append(id);
 		sb.append("] status=");
 		sb.append(currentState);
 		sb.append(" {");
