@@ -1,5 +1,8 @@
 package pl.frati.dynx.tasks;
 
+import java.util.Date;
+import java.util.Optional;
+
 /**
  * <p>
  * General interface of managable task.
@@ -106,6 +109,95 @@ public interface Task {
 	 *            observer to be added (never null)
 	 */
 	void addStateObserver(StateObserver observer);
+
+	/**
+	 * <p>
+	 * Returns exception that caused the task to fail.
+	 * </p>
+	 * 
+	 * <p>
+	 * Note that exception may not be present even when task fails (is in
+	 * {@link State#FAILED}, as other circumstances may cause a task to fail.
+	 * </p>
+	 * 
+	 * @return Optional Exception causing task fail
+	 */
+	Optional<Exception> getFailCause();
+
+	/**
+	 * <p>
+	 * Checks if task is in progress.
+	 * </p>
+	 * <p>
+	 * Task in progress means task in one of the following
+	 * {@link #getCurrentState() states}:
+	 * </p>
+	 * <ul>
+	 * <li>STARTING</li>
+	 * <li>RUNNING</li>
+	 * <li>PAUSING</li>
+	 * <li>PAUSED</li>
+	 * <li>STOPPING</li>
+	 * </ul>
+	 * 
+	 * @return True if task is in progress.
+	 */
+	boolean isInProgress();
+
+	/**
+	 * <p>
+	 * Checks if task has been ended somehow.
+	 * </p>
+	 * 
+	 * <p>
+	 * Ended task is a task in one of the following {@link #getCurrentState()
+	 * states}:
+	 * </p>
+	 * <ul>
+	 * <li>FINISHED</li>
+	 * <li>FAILED</li>
+	 * <li>STOPPED</li>
+	 * </ul>
+	 * 
+	 * @return True if task ended
+	 */
+	boolean isEnded();
+
+	/**
+	 * <p>
+	 * Gets time when {@link #requestStart()} method has been called.
+	 * </p>
+	 * 
+	 * @return Optional time of start request. If start request has not been
+	 *         issued time is not present.
+	 */
+	Optional<Date> getRequestStartTime();
+
+	/**
+	 * <p>
+	 * Gets time when task actually entered {@link State#RUNNING} state
+	 * 
+	 * @return Optional time of actual start. If start request has not been
+	 *         issued time is not present.
+	 */
+	Optional<Date> getActualStartTime();
+
+	/**
+	 * <p>
+	 * Gets time when task {@link #isEnded() ended}.
+	 * </p>
+	 * 
+	 * @return Optional time of task end. Time is not present if task didn't
+	 *         {@link #isEnded() end}.
+	 */
+	Optional<Date> getEndTime();
+
+	/**
+	 * <p>
+	 * Pauses current thread until task {@link #isEnded() ends}.
+	 * </p>
+	 */
+	void awaitEnd();
 
 	/**
 	 * <p>
