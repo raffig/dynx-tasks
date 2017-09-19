@@ -20,11 +20,11 @@ public class ParalleledTaskTest {
 
 		task.requestStart();
 
-		Assert.assertEquals(task.getCurrentState(), State.RUNNING);
+		Assert.assertEquals(task.getCurrentState(), State.FINISHED);
 
 		Assert.assertTrue(task.getRequestStartTime().isPresent());
 		Assert.assertTrue(task.getActualStartTime().isPresent());
-		Assert.assertFalse(task.getEndTime().isPresent());
+		Assert.assertTrue(task.getEndTime().isPresent());
 	}
 
 	@Test
@@ -344,6 +344,11 @@ public class ParalleledTaskTest {
 		Assert.assertTrue(task.getRequestStartTime().isPresent());
 		Assert.assertTrue(task.getActualStartTime().isPresent());
 		Assert.assertTrue(task.getEndTime().isPresent());
+	}
+
+	@Test(enabled=false)
+	public void checkStateObservers() {
+		// TODO test observers
 	}
 
 	private static class ThreadTestTask extends AbstractThreadTask {

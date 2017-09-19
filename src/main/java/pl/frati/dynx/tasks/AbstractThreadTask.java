@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 
 import pl.frati.dynx.tasks.Task.State;
 
@@ -48,6 +49,8 @@ import pl.frati.dynx.tasks.Task.State;
  *
  */
 public abstract class AbstractThreadTask implements ThreadTask {
+
+	public static final List<State> FINAL_STATES = Arrays.asList(State.FINISHED, State.FAILED, State.STOPPPED);
 
 	private String id;
 
@@ -94,6 +97,53 @@ public abstract class AbstractThreadTask implements ThreadTask {
 		stateObservers.forEach(so -> so.stateChanged(this, oldState, newState));
 	}
 
+	/**
+	 * <p>
+	 * Method performs transition to given final state.
+	 * </p>
+	 * 
+	 * <p>
+	 * This method is designed only for a special case - when task implementor
+	 * knows that task has nothing to do and wants to go directly from
+	 * {@link State#NOT_STARTED} state to some {@link #FINAL_STATES final state}
+	 * this method should be used. Note that this method will ommit all states
+	 * related to task in progress and will go directly from
+	 * {@link State#NOT_STARTED} state to given final state.
+	 * </p>
+	 * 
+	 * @param finalState
+	 *            one of the {@link #FINAL_STATES final states}
+	 * 
+	 * @throws IllegalArgumentException
+	 *             thrown if given final state is not one of
+	 *             {@link #FINAL_STATES final states}
+	 * @throws IllegalStateException
+	 *             thrown when task is in state other than
+	 *             {@link State#NOT_STARTED}
+	 */
+	protected void endTask(State finalState) {
+		if (!FINAL_STATES.contains(finalState)) {
+			throw new IllegalArgumentException("Given state must be final (one of: "
+					+ String.join(", ", FINAL_STATES.stream().map(Enum::toString).collect(Collectors.toList())) + ")");
+		}
+
+		currentStateLock.writeLock().lock();
+
+		try {
+			if (!State.NOT_STARTED.equals(currentState)) {
+				throw new IllegalStateException("This method may be executed only when task is in "
+						+ State.NOT_STARTED.name() + " state. Current task state is: " + currentState.name());
+			}
+
+			currentState = finalState;
+			endTime = new Date();
+		} finally {
+			currentStateLock.writeLock().unlock();
+		}
+
+		notifyObservers(State.NOT_STARTED, finalState);
+	}
+
 	@Override
 	public boolean isInProgress() {
 		return Arrays.asList(State.STARTING, State.RUNNING, State.PAUSING, State.PAUSED, State.STOPPING)
@@ -102,7 +152,7 @@ public abstract class AbstractThreadTask implements ThreadTask {
 
 	@Override
 	public boolean isEnded() {
-		return Arrays.asList(State.FINISHED, State.FAILED, State.STOPPPED).contains(currentState);
+		return FINAL_STATES.contains(currentState);
 	}
 
 	protected abstract boolean hasNextPortion();
@@ -155,10 +205,11 @@ public abstract class AbstractThreadTask implements ThreadTask {
 
 		notifyObservers(oldState, currentState);
 
-		oldState = null;
-		stateChanged = false;
 
 		while (true) {
+
+			oldState = null;
+			stateChanged = false;
 
 			try {
 				if (hasNextPortion()) {
@@ -176,6 +227,8 @@ public abstract class AbstractThreadTask implements ThreadTask {
 				} finally {
 					currentStateLock.writeLock().unlock();
 				}
+				
+				notifyObservers(oldState, currentState);
 
 			} catch (Exception e) {
 				failCause = e;
@@ -228,8 +281,8 @@ public abstract class AbstractThreadTask implements ThreadTask {
 
 					}
 				}
-			} 
-			
+			}
+
 			if (Task.State.STOPPPED.equals(getCurrentState())) {
 				return;
 			} else if (State.FAILED.equals(currentState)) {
