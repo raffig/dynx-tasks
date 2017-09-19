@@ -1,11 +1,16 @@
 package pl.frati.dynx.tasks;
 
 import java.io.InterruptedIOException;
+import java.util.AbstractMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import pl.frati.dynx.tasks.Task.State;
+import pl.frati.dynx.tasks.Task.StateObserver;
 
 public class AbstractThreadTaskTest {
 
@@ -13,6 +18,8 @@ public class AbstractThreadTaskTest {
 	public void checkExecution() throws InterruptedException {
 
 		TestTask task = new TestTask(4);
+		TestStateObserver observer = new TestStateObserver();
+		task.addStateObserver(observer);
 
 		System.out.println(task);
 
@@ -20,12 +27,18 @@ public class AbstractThreadTaskTest {
 		Assert.assertFalse(task.getRequestStartTime().isPresent());
 		Assert.assertFalse(task.getActualStartTime().isPresent());
 		Assert.assertFalse(task.getEndTime().isPresent());
+		Assert.assertTrue(observer.observedStateChanges.isEmpty());
 
 		task.requestStart();
 
 		System.out.println(task);
 		Thread.sleep(100);
 		System.out.println(task);
+		
+		Assert.assertEquals(State.NOT_STARTED, observer.observedStateChanges.get(0).getKey());
+		Assert.assertEquals(State.STARTING, observer.observedStateChanges.get(0).getValue());
+		Assert.assertEquals(State.STARTING, observer.observedStateChanges.get(1).getKey());
+		Assert.assertEquals(State.RUNNING, observer.observedStateChanges.get(1).getValue());
 
 		Assert.assertEquals(task.getCurrentState(), State.RUNNING);
 		Assert.assertTrue(task.getRequestStartTime().isPresent());
@@ -47,12 +60,17 @@ public class AbstractThreadTaskTest {
 		Assert.assertTrue(task.getRequestStartTime().isPresent());
 		Assert.assertTrue(task.getActualStartTime().isPresent());
 		Assert.assertTrue(task.getEndTime().isPresent());
+
+		Assert.assertEquals(State.RUNNING, observer.observedStateChanges.get(2).getKey());
+		Assert.assertEquals(State.FINISHED, observer.observedStateChanges.get(2).getValue());
 	}
 
 	@Test
 	public void checkPause() throws InterruptedException {
 
 		TestTask task = new TestTask(5);
+		TestStateObserver observer = new TestStateObserver();
+		task.addStateObserver(observer);
 
 		System.out.println(task);
 
@@ -72,6 +90,11 @@ public class AbstractThreadTaskTest {
 		Assert.assertTrue(task.getActualStartTime().isPresent());
 		Assert.assertFalse(task.getEndTime().isPresent());
 
+		Assert.assertEquals(observer.observedStateChanges.get(0).getKey(), State.NOT_STARTED);
+		Assert.assertEquals(observer.observedStateChanges.get(0).getValue(), State.STARTING);
+		Assert.assertEquals(observer.observedStateChanges.get(1).getKey(), State.STARTING);
+		Assert.assertEquals(observer.observedStateChanges.get(1).getValue(), State.RUNNING);
+
 		task.requestPause();
 		Thread.sleep(200);
 		System.out.println(task);
@@ -81,6 +104,12 @@ public class AbstractThreadTaskTest {
 		Assert.assertTrue(task.getActualStartTime().isPresent());
 		Assert.assertFalse(task.getEndTime().isPresent());
 
+		Assert.assertEquals(observer.observedStateChanges.get(2).getKey(), State.RUNNING);
+		Assert.assertEquals(observer.observedStateChanges.get(2).getValue(), State.PAUSING);
+		Assert.assertEquals(observer.observedStateChanges.get(3).getKey(), State.PAUSING);
+		Assert.assertEquals(observer.observedStateChanges.get(3).getValue(), State.PAUSED);
+		Assert.assertEquals(observer.observedStateChanges.size(), 4);
+
 		Thread.sleep(400);
 		System.out.println(task);
 
@@ -88,6 +117,7 @@ public class AbstractThreadTaskTest {
 		Assert.assertTrue(task.getRequestStartTime().isPresent());
 		Assert.assertTrue(task.getActualStartTime().isPresent());
 		Assert.assertFalse(task.getEndTime().isPresent());
+		Assert.assertEquals(observer.observedStateChanges.size(), 4);
 
 		task.requestResume();
 
@@ -99,6 +129,10 @@ public class AbstractThreadTaskTest {
 		Assert.assertTrue(task.getActualStartTime().isPresent());
 		Assert.assertFalse(task.getEndTime().isPresent());
 
+		Assert.assertEquals(observer.observedStateChanges.get(4).getKey(), State.PAUSED);
+		Assert.assertEquals(observer.observedStateChanges.get(4).getValue(), State.RUNNING);
+		Assert.assertEquals(observer.observedStateChanges.size(), 5);
+
 		task.awaitEnd();
 		System.out.println(task);
 
@@ -106,12 +140,18 @@ public class AbstractThreadTaskTest {
 		Assert.assertTrue(task.getRequestStartTime().isPresent());
 		Assert.assertTrue(task.getActualStartTime().isPresent());
 		Assert.assertTrue(task.getEndTime().isPresent());
+
+		Assert.assertEquals(observer.observedStateChanges.size(), 6);
+		Assert.assertEquals(observer.observedStateChanges.get(5).getKey(), State.RUNNING);
+		Assert.assertEquals(observer.observedStateChanges.get(5).getValue(), State.FINISHED);
 	}
 
 	@Test
 	public void checkStop() throws InterruptedException {
 
 		TestTask task = new TestTask(4);
+		TestStateObserver observer = new TestStateObserver();
+		task.addStateObserver(observer);
 
 		System.out.println(task);
 
@@ -131,6 +171,11 @@ public class AbstractThreadTaskTest {
 		Assert.assertTrue(task.getActualStartTime().isPresent());
 		Assert.assertFalse(task.getEndTime().isPresent());
 
+		Assert.assertEquals(observer.observedStateChanges.get(0).getKey(), State.NOT_STARTED);
+		Assert.assertEquals(observer.observedStateChanges.get(0).getValue(), State.STARTING);
+		Assert.assertEquals(observer.observedStateChanges.get(1).getKey(), State.STARTING);
+		Assert.assertEquals(observer.observedStateChanges.get(1).getValue(), State.RUNNING);
+
 		task.requestStop();
 		Thread.sleep(100);
 		System.out.println(task);
@@ -139,6 +184,11 @@ public class AbstractThreadTaskTest {
 		Assert.assertTrue(task.getRequestStartTime().isPresent());
 		Assert.assertTrue(task.getActualStartTime().isPresent());
 		Assert.assertTrue(task.getEndTime().isPresent());
+
+		Assert.assertEquals(observer.observedStateChanges.get(2).getKey(), State.RUNNING);
+		Assert.assertEquals(observer.observedStateChanges.get(2).getValue(), State.STOPPING);
+		Assert.assertEquals(observer.observedStateChanges.get(3).getKey(), State.STOPPING);
+		Assert.assertEquals(observer.observedStateChanges.get(3).getValue(), State.STOPPPED);
 
 		task.awaitEnd();
 		System.out.println(task);
@@ -154,6 +204,8 @@ public class AbstractThreadTaskTest {
 		
 		int interruptAtLoop = 4;
 		TestTask task = new TestTask(6, interruptAtLoop);
+		TestStateObserver observer = new TestStateObserver();
+		task.addStateObserver(observer);
 		
 		task.requestStart();
 		
@@ -166,6 +218,14 @@ public class AbstractThreadTaskTest {
 		Assert.assertEquals(task.getCurrentLoop(), interruptAtLoop);
 		Assert.assertEquals(task.getCurrentState(), State.STOPPPED);
 		
+		Assert.assertEquals(observer.observedStateChanges.get(0).getKey(), State.NOT_STARTED);
+		Assert.assertEquals(observer.observedStateChanges.get(0).getValue(), State.STARTING);
+		Assert.assertEquals(observer.observedStateChanges.get(1).getKey(), State.STARTING);
+		Assert.assertEquals(observer.observedStateChanges.get(1).getValue(), State.RUNNING);
+		Assert.assertEquals(observer.observedStateChanges.get(2).getKey(), State.RUNNING);
+		Assert.assertEquals(observer.observedStateChanges.get(2).getValue(), State.STOPPING);
+		Assert.assertEquals(observer.observedStateChanges.get(3).getKey(), State.STOPPING);
+		Assert.assertEquals(observer.observedStateChanges.get(3).getValue(), State.STOPPPED);
 	}
 	
 	private static final class TestTask extends AbstractThreadTask {
@@ -206,5 +266,16 @@ public class AbstractThreadTaskTest {
 			currentLoop++;
 		}
 
+	}
+	
+	private static class TestStateObserver implements StateObserver {
+
+		private List<Map.Entry<State, State>> observedStateChanges = new LinkedList<>();
+		
+		@Override
+		public void stateChanged(Task task, State oldState, State newState) {
+			observedStateChanges.add(new AbstractMap.SimpleImmutableEntry<State, State>(oldState, newState));
+		}
+		
 	}
 }
