@@ -228,6 +228,50 @@ public class AbstractThreadTaskTest {
 		Assert.assertEquals(observer.observedStateChanges.get(3).getValue(), State.STOPPPED);
 	}
 	
+	@Test
+	public void checkIgnoreRequestFeature() {
+		
+		TestTask task = new TestTask(1);
+		task.requestStart();
+		task.awaitEnd();
+		
+		try {
+			task.requestPause();
+			Assert.fail("This should cause an exception");
+		} catch (IllegalStateException e) {}
+		
+		try {
+			task.requestStop();
+			Assert.fail("This should cause an exception");
+		} catch (IllegalStateException e) {}
+
+		try {
+			task.requestStart();
+			Assert.fail("This should cause an exception");
+		} catch (IllegalStateException e) {}
+
+		try {
+			task.requestResume();
+			Assert.fail("This should cause an exception");
+		} catch (IllegalStateException e) {}
+
+		task.setIgnoreRequestsInFinalState(true);
+		
+		Assert.assertEquals(Task.State.FINISHED, task.getCurrentState());
+
+		task.requestPause();
+		Assert.assertEquals(Task.State.FINISHED, task.getCurrentState());
+
+		task.requestResume();
+		Assert.assertEquals(Task.State.FINISHED, task.getCurrentState());
+
+		task.requestStart();
+		Assert.assertEquals(Task.State.FINISHED, task.getCurrentState());
+
+		task.requestStop();
+		Assert.assertEquals(Task.State.FINISHED, task.getCurrentState());
+	}
+	
 	private static final class TestTask extends AbstractThreadTask {
 
 		private int loops;

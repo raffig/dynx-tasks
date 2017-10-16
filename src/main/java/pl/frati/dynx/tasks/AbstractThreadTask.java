@@ -65,6 +65,8 @@ public abstract class AbstractThreadTask implements ThreadTask {
 	private List<StateObserver> stateObservers = new ArrayList<>(1);
 	private Exception failCause;
 
+	private boolean ignoreRequestsInFinalState;
+
 	public AbstractThreadTask() {
 		this(UUID.randomUUID().toString());
 	}
@@ -95,6 +97,37 @@ public abstract class AbstractThreadTask implements ThreadTask {
 
 	private void notifyObservers(Task.State oldState, Task.State newState) {
 		stateObservers.forEach(so -> so.stateChanged(this, oldState, newState));
+	}
+
+	/**
+	 * <p>
+	 * Sets behavior to ignore requests when task in final state or not.
+	 * </p>
+	 * 
+	 * <p>
+	 * By default requests ({@link #requestPause()}, {@link #requestResume()},
+	 * {@link #requestStart()}, {@link #requestStop()}) issued when task is in
+	 * final state cause exception. This method allows to change this behavior,
+	 * so such requests are simply ignored.
+	 * </p>
+	 * 
+	 * @param ignore
+	 *            true for requests to be ignored, false to throw exception.
+	 */
+	public void setIgnoreRequestsInFinalState(boolean ignore) {
+		ignoreRequestsInFinalState = ignore;
+	}
+
+	/**
+	 * <p>
+	 * Gets setup of requests ignoring in final state.
+	 * </p>
+	 * 
+	 * @return True if requests are ignored when task is in final state, false
+	 *         if exception is thrown
+	 */
+	public boolean getIgnoreRequestsInFinalState() {
+		return ignoreRequestsInFinalState;
 	}
 
 	/**
@@ -166,6 +199,11 @@ public abstract class AbstractThreadTask implements ThreadTask {
 
 		currentStateLock.writeLock().lock();
 		try {
+			
+			if (ignoreRequestsInFinalState && FINAL_STATES.contains(currentState)) {
+				return;
+			}
+
 			if (!State.NOT_STARTED.equals(currentState)) {
 				throw new IllegalStateException("Task must be in state " + State.NOT_STARTED
 						+ " for requestStart(). Task is currently in " + currentState.name() + " state");
@@ -205,7 +243,6 @@ public abstract class AbstractThreadTask implements ThreadTask {
 
 		notifyObservers(oldState, currentState);
 
-
 		while (true) {
 
 			oldState = null;
@@ -227,7 +264,7 @@ public abstract class AbstractThreadTask implements ThreadTask {
 				} finally {
 					currentStateLock.writeLock().unlock();
 				}
-				
+
 				notifyObservers(oldState, currentState);
 
 			} catch (Exception e) {
@@ -319,6 +356,10 @@ public abstract class AbstractThreadTask implements ThreadTask {
 
 		currentStateLock.writeLock().lock();
 		try {
+
+			if (ignoreRequestsInFinalState && FINAL_STATES.contains(currentState)) {
+				return;
+			}
 			if (!State.RUNNING.equals(currentState) && !State.STARTING.equals(currentState)) {
 				throw new IllegalStateException("Task must be in state " + State.RUNNING + " or " + State.STARTING
 						+ " so it can be paused. Current task state is: " + currentState);
@@ -343,6 +384,11 @@ public abstract class AbstractThreadTask implements ThreadTask {
 
 		currentStateLock.writeLock().lock();
 		try {
+
+			if (ignoreRequestsInFinalState && FINAL_STATES.contains(currentState)) {
+				return;
+			}
+
 			if (!State.STARTING.equals(currentState) && !State.RUNNING.equals(currentState)) {
 				throw new IllegalStateException("Task must be in state " + State.STARTING + " or " + State.RUNNING
 						+ " for requestStop(). Task is currently in " + currentState.name() + " state");
@@ -367,6 +413,11 @@ public abstract class AbstractThreadTask implements ThreadTask {
 
 		currentStateLock.writeLock().lock();
 		try {
+
+			if (ignoreRequestsInFinalState && FINAL_STATES.contains(currentState)) {
+				return;
+			}
+
 			if (!State.PAUSING.equals(currentState) && !State.PAUSED.equals(currentState)) {
 				throw new IllegalStateException("Task must be in state " + State.PAUSING + " or " + State.PAUSED
 						+ " so it can be paused. Current task state is: " + currentState);
